@@ -4,6 +4,8 @@ const path = require('path');
 const cookieParser = require('cookie-parser');
 const logger = require('morgan');
 const cors = require('cors');
+const needle = require('needle');
+require('dotenv').config();
 
 const indexRouter = require('./routes/index');
 
@@ -19,6 +21,15 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
+
+const stream = needle.get(process.env.ENDPOINT_URL, {
+  headers: {
+    "User-Agent": "v2SampleStreamJS",
+    "Authorization": `Bearer ${process.env.BEARER_TOKEN}`
+  },
+  timeout: 20000
+});
+app.set('stream', stream);
 
 app.use('/', indexRouter);
 
