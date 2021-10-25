@@ -1,12 +1,15 @@
 {
   "ExpandedNodes": [
     "",
+    "\\twiter-live-filter-client",
+    "\\twiter-live-filter-client\\src",
+    "\\twiter-live-filter-client\\src\\components",
     "\\twitter-live-filter-api",
     "\\twitter-live-filter-api\\routes",
     "\\twitter-stream-api",
     "\\twitter-stream-api\\controllers",
     "\\twitter-stream-api\\routes"
   ],
-  "SelectedNode": "\\twitter-stream-api\\app.js",
+  "SelectedNode": "\\twitter-live-filter-api\\routes\\filter.js",
   "PreviewInSolutionExplorer": false
 }
