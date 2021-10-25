@@ -10,9 +10,12 @@
     "cors": "^2.8.5",
     "debug": "~2.6.9",
     "express": "~4.16.1",
+    "got": "^11.8.2",
     "http-errors": "~1.6.3",
     "morgan": "~1.9.1",
     "nodemon": "^2.0.13",
-    "pug": "2.0.0-beta11"
+    "promisify": "0.0.3",
+    "pug": "2.0.0-beta11",
+    "stream": "0.0.2"
   }
 }
