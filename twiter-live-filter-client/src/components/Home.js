@@ -7,6 +7,7 @@ export default function Home() {
   const [apiUrl, setApiUrl] = useState('');
   const [tweets, setTweets] = useState([]);
   const textDecoder = new TextDecoder("utf-8");
+  
 
   function stringToJSON(string) {
     let parsedData = [];
@@ -28,9 +29,9 @@ export default function Home() {
     return [JSON.parse(string).data];
   }
 
-  function updateTweets() {
-    const stream = needle.get(baseUrl);
-    stream
+    function updateTweets() {   
+      const stream = needle.get(baseUrl);
+      stream
       .on('data', (data) => {
         const parsedData = stringToJSON(textDecoder.decode(data));
         setTweets(tweets => [ ...parsedData, ...tweets ]);
