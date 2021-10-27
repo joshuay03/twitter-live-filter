@@ -1,3 +1,5 @@
+const needle = require('needle');
+
 /**
  * GET Twitter stream
  * Streams back the contents of the Twitter stream to work around the single
@@ -5,6 +7,16 @@
  */
 async function get(req, res, next) {
   function streamConnect(retryAttempt) {
+    if (req.app.get('stream').request.aborted) {
+      req.app.set('stream', needle.get(process.env.ENDPOINT_URL, {
+        headers: {
+          "User-Agent": "v2SampleStreamJS",
+          "Authorization": `Bearer ${process.env.BEARER_TOKEN}`
+        },
+        timeout: 20000
+      }));
+    }
+
     const stream = req.app.get('stream');
     let dataCounter = 0;
 
