@@ -4,15 +4,13 @@ import needle from 'needle';
 export default function Home() {
   const baseUrl = 'http://localhost:3002/filter'
   const [queries, setQueries] = useState('');
-  const [apiUrl, setApiUrl] = useState('');
   const [tweets, setTweets] = useState([]);
   const textDecoder = new TextDecoder("utf-8");
-  
 
   function stringToJSON(string) {
     let parsedData = [];
 
-    if (string.match(/"data":/g).length > 1) {
+    if (string.match(/"data":/g)?.length > 1) {
       let index1 = string.indexOf('"data":') - 1;
       let index2 = string.indexOf('"data":', index1 + 8) - 1;
 
@@ -29,9 +27,10 @@ export default function Home() {
     return [JSON.parse(string).data];
   }
 
-    function updateTweets() {   
-      const stream = needle.get(baseUrl);
-      stream
+  function updateTweets(apiUrl) {
+    const stream = needle.get(apiUrl);
+
+    stream
       .on('data', (data) => {
         const parsedData = stringToJSON(textDecoder.decode(data));
         setTweets(tweets => [ ...parsedData, ...tweets ]);
@@ -46,11 +45,6 @@ export default function Home() {
 
   function handleSubmit(e) {
     e.preventDefault();
-    updateTweets();
-  }
-
-  function handleQueriesChanged(e) {
-    setQueries(e.target.value);
 
     let queryUrl = '?';
     let queryCount = 0;
@@ -61,7 +55,8 @@ export default function Home() {
       queryUrl += `query${queryCount}=${query.trim()}&`;
     });
     queryUrl = queryUrl.slice(0, queryUrl.length - 1);
-    setApiUrl(baseUrl + queryUrl);
+
+    updateTweets(baseUrl + queryUrl);
   }
 
   useEffect(() => {}, [tweets]);
@@ -75,7 +70,7 @@ export default function Home() {
               type="text"
               placeholder="Enter comma separated queries (Ex: query1,query2)"
               value={queries}
-              onChange={(e) => {handleQueriesChanged(e)}}
+              onChange={(e) => {setQueries(e.target.value)}}
               className="h-12 w-search rounded-lg text-xl px-4"
             />
             <button
