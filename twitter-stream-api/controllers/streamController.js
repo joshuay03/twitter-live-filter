@@ -51,8 +51,12 @@ async function get(req, res, next) {
           streamConnect(++retryAttempt);
         }, 2 ** retryAttempt);
       }
-    }).on('done', () => {
+    });
+
+    // End response and abort stream when client disconnects
+    req.on('close', () => {
       res.end();
+      stream.abort();
     });
   }
 

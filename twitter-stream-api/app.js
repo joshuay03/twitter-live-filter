@@ -30,7 +30,6 @@ const stream = needle.get(process.env.ENDPOINT_URL, {
   timeout: 20000
 });
 app.set('stream', stream);
-process.setMaxListeners(0);
 
 app.use('/', indexRouter);
 
