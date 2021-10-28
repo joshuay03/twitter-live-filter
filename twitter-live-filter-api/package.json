@@ -16,6 +16,8 @@
     "natural": "^5.1.1",
     "needle": "^3.0.0",
     "nodemon": "^2.0.13",
-    "pug": "2.0.0-beta11"
+    "pug": "2.0.0-beta11",
+    "redis": "^3.1.2",
+    "redis-clustr": "^1.7.0"
   }
 }

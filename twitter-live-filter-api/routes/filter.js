@@ -3,6 +3,24 @@ const router = express.Router();
 const natural = require('natural');
 const tokenizer = new natural.WordTokenizer();
 const needle = require('needle');
+const RedisClustr = require('redis-clustr');
+const RedisClient = require('redis');
+
+const redis = new RedisClustr({
+  servers: [
+    {
+      host: process.env.REDIS_CLUSTER_HOST,
+      port: process.env.REDIS_CLUSTER_PORT
+    }
+  ],
+  createClient: (port, host) => {
+    // this is the default behaviour
+    return RedisClient.createClient(port, host);
+  }
+});
+
+//connect to redis
+redis.on("connect", () => {});
 
 /* GET Twitter stream filtered. */
 router.get('/', async (req, res, next) => {
@@ -17,26 +35,38 @@ router.get('/', async (req, res, next) => {
     return res.status(400).json({ Error: 'Invalid query format.' });
   } else {
     function streamConnect(retryAttempt, queries) {
-      const stream = needle.get(process.env.STREAM_API_URL, {
-        headers: {
-          "User-Agent": "v2SampleStreamJS",
-          "Authorization": `Bearer ${process.env.BEARER_TOKEN}`
-        },
-        timeout: 20000
-      });
-      let filteredTweet = '';
+      const stream = needle.get(process.env.STREAM_API_URL);
       let dataCounter = 0;
+      let match = false;
+      let filteredTweet = '';
 
       stream.on('data', (data) => {
         try {
           const tweet = JSON.parse(data);
+          const tokenizedTweet = tokenizer.tokenize(tweet.data.text);
+
           // Check if tweet text contains any of the queries
-          if (tokenizer.tokenize(tweet.data.text).filter((word) => queries.indexOf(word) !== -1).length > 0) {
-            filteredTweet = tweet;
-          }
-          if (filteredTweet) {
-            res.write(JSON.stringify(filteredTweet)); // Write data to response.
-          }
+          tokenizedTweet.forEach((word) => {
+            if (queries.indexOf(word) !== -1) {
+              // Save matching words in response tweet object
+              if (tweet.data.matches && tweet.data.matches.indexOf(word) !== -1) {
+                tweet.data.matches.push(word);
+              } else {
+                tweet.data.matches = [word];
+              }
+
+              // Save matching tweets in cache
+              redis.set(word, tweet, (err, reply) => {
+                if (err) console.log(err);
+                console.log(reply);
+              });
+
+              match = true;
+            }
+          })
+
+          if (match) filteredTweet = tweet;
+
           if (dataCounter === 0) {
             res.statusCode = 200;
             res.set({
@@ -44,28 +74,21 @@ router.get('/', async (req, res, next) => {
               'Content-Type': 'text/plain; charset=utf-8',
             });
           }
+
+          if (filteredTweet) {
+            res.write(JSON.stringify(filteredTweet)); // Write data to response.
+          }
+
           retryAttempt = 0; // A successful connection resets retry count.
           dataCounter++;
+          match = false;
           filteredTweet = '';
-        } catch (e) {
-          // Catches error in case of 401 unauthorized error status.
-          if (data.status === 401) {
-            console.log(data);
-            res.status(500).end();
-            process.exit(1);
-          } else if (
-              data.detail === 'This stream is currently at the maximum allowed connection limit.'
-            ) {
-            console.log(data.detail)
-            res.status(500).end();
-            process.exit(1)
-          } else {
-            // Keep alive signal received. Do nothing.
-          }
+        } catch (err) {
+          // Keep alive signal received. Do nothing.
         }
-      }).on('err', (error) => {
-        if (error.code !== 'ECONNRESET') {
-          console.log(error.code);
+      }).on('err', (err) => {
+        if (err.code !== 'ECONNRESET') {
+          console.log(err.code);
           res.status(500).end();
           process.exit(1);
         } else {
