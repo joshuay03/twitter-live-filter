@@ -24,17 +24,12 @@ redis.on("connect", () => {});
 
 /* GET Twitter stream filtered. */
 router.get('/', async (req, res, next) => {
-  const { query1, query2, query3, ...remaining } = req.query;
+  const queries = Object.values(req.query);
 
-  if (!query1 && !query2 && !query3) {
+  if (queries.length === 0) {
     return res.status(400).json({ Error: 'Minimum of 1 query required.' });
-  } else if (
-    (!query1) ||
-    (query1 && !query2 && query3)
-  ) {
-    return res.status(400).json({ Error: 'Invalid query format.' });
   } else {
-    function streamConnect(retryAttempt, queries) {
+    function streamConnect(retryAttempt) {
       const stream = needle.get(process.env.STREAM_API_URL);
       let dataCounter = 0;
       let match = false;
@@ -109,12 +104,7 @@ router.get('/', async (req, res, next) => {
       });
     }
 
-    streamConnect(
-      0,
-      [query1, query2, query3]
-        .filter((query) => !!query)
-        .map((query) => query.trim())
-    );
+    streamConnect(0);
   }
 });
 

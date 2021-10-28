@@ -51,12 +51,15 @@ export default function Home() {
     const queryList = queries.split(',');
 
     queryList.forEach((query) => {
-      queryCount++;
-      queryUrl += `query${queryCount}=${query.trim()}&`;
+      if (query.trim()) {
+        queryCount++;
+        queryUrl += `query${queryCount}=${query.trim()}&`;
+      }
     });
     queryUrl = queryUrl.slice(0, queryUrl.length - 1);
 
-    updateTweets(baseUrl + queryUrl);
+    if (queryCount > 0) updateTweets(baseUrl + queryUrl)
+    else alert('Error: Minimum of 1 query required.')
   }
 
   useEffect(() => {}, [tweets]);
@@ -68,7 +71,7 @@ export default function Home() {
           <form onSubmit={handleSubmit}>
             <input
               type="text"
-              placeholder="Enter comma separated queries (Ex: query1,query2)"
+              placeholder="Enter comma separated queries (Ex: query1, query2)"
               value={queries}
               onChange={(e) => {setQueries(e.target.value)}}
               className="h-12 w-search rounded-lg text-xl px-4"
