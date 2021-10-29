@@ -32,8 +32,11 @@ export default function Home() {
 
     stream
       .on('data', (data) => {
-        const parsedData = stringToJSON(textDecoder.decode(data));
-        setTweets(tweets => [ ...parsedData, ...tweets ]);
+        // must check incase of 'undefined'
+        if (data) {
+            const parsedData = stringToJSON(textDecoder.decode(data));
+            setTweets(tweets => [...parsedData, ...tweets]);
+        }        
       })
       .on('err', (err) => {
         console.log(err);
