@@ -15,13 +15,9 @@ function createFilterStream(queries) {
                 let tokenizedTweet = tokenizer.tokenize(tweet.data.text);
 
                 // Check if tweet text contains any of the queries
-                tokenizedTweet.forEach((word) => {
+                for (let word of tokenizedTweet) {
                     if (queries.indexOf(word) !== -1) {
-                        if (tweet.data.matches && tweet.data.matches.indexOf(word) !== -1) {
-                            tweet.data.matches.push(word);
-                        } else {
-                            tweet.data.matches = [word];
-                        }
+                        tweet.data.matches = word;
 
                         const score = analyzer.getSentiment(tokenizedTweet);
 
@@ -32,9 +28,10 @@ function createFilterStream(queries) {
                         bucket.uploadObject(word, filteredTweet)
                             .catch(err => console.log(err));
 
-                        return match = true;                       
+                        match = true;
+                        break;
                     }
-                })
+                }
             } catch (err) {
                 // Various encoding/decoding issues with the tweets due to special characters.
                 // As such, we shoud keep the signal alive and do nothing.
