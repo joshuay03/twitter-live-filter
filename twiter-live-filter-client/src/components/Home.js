@@ -2,7 +2,7 @@ import { React, useState, useEffect, useRef } from 'react';
 import parse from 'html-react-parser';
 
 export default function Home() {
-  const baseUrl = 'http://localhost:3002/filter';
+  const baseUrl = `http://${window.location.hostname}:3002/filter`;
   const [queries, setQueries] = useState('');
   const [apiUrl, setApiUrl] = useState('');
   const [tweets, setTweets] = useState([]);
