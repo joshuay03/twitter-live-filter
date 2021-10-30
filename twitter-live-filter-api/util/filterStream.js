@@ -3,8 +3,10 @@ const tokenizer = new natural.WordTokenizer();
 const { Transform } = require('stream');
 const bucket = require('../util/aws');
 
+const analyzer = new natural.SentimentAnalyzer('English', natural.PorterStemmer, 'afinn');
+
 function createFilterStream(queries) {
-    return new Transform({
+    return new Transform({        
         transform(chunk, encoding, callback) {
             let filteredTweet = '';
             let match = false;
@@ -21,12 +23,16 @@ function createFilterStream(queries) {
                             tweet.data.matches = [word];
                         }
 
+                        const score = analyzer.getSentiment(tokenizedTweet);
+
+                        tweet.data.sentimentScore = score;
+
                         filteredTweet = JSON.stringify(tweet);
 
                         bucket.uploadObject(word, filteredTweet)
                             .catch(err => console.log(err));
 
-                        return match = true;
+                        return match = true;                       
                     }
                 })
             } catch (err) {
