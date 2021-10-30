@@ -1,11 +1,14 @@
-import { React, useState, useEffect } from 'react';
-import needle from 'needle';
+import { React, useState, useEffect, useRef } from 'react';
+import parse from 'html-react-parser';
 
 export default function Home() {
-  const baseUrl = 'http://localhost:3002/filter'
+  const baseUrl = 'http://localhost:3002/filter';
   const [queries, setQueries] = useState('');
+  const [apiUrl, setApiUrl] = useState('');
   const [tweets, setTweets] = useState([]);
-  const textDecoder = new TextDecoder("utf-8");
+  const [searching, setSearching] = useState(false);
+  const fetchController = new AbortController();
+  const response = useRef(null);
 
   function stringToJSON(string) {
     let parsedData = [];
@@ -27,23 +30,7 @@ export default function Home() {
     return [JSON.parse(string).data];
   }
 
-  function updateTweets(apiUrl) {
-    const stream = needle.get(apiUrl);
-
-    stream
-      .on('data', (data) => {
-        const parsedData = stringToJSON(textDecoder.decode(data));
-        setTweets(tweets => [ ...parsedData, ...tweets ]);
-      })
-      .on('err', (err) => {
-        console.log(err);
-      })
-      .on('done', () => {
-        setQueries('');
-      });
-  }
-
-  function handleSubmit(e) {
+  async function startFilter(e) {
     e.preventDefault();
 
     let queryUrl = '?';
@@ -58,17 +45,60 @@ export default function Home() {
     });
     queryUrl = queryUrl.slice(0, queryUrl.length - 1);
 
-    if (queryCount > 0) updateTweets(baseUrl + queryUrl)
-    else alert('Error: Minimum of 1 query required.')
+    if (queryCount > 0) {
+      setApiUrl(baseUrl + queryUrl);
+      setSearching(true);
+    }
+    else alert('Error: Minimum of 5 queries required.');
   }
 
-  useEffect(() => {}, [tweets]);
+  function stopFilter(e) {
+    e.preventDefault();
+    fetchController.abort();
+    setSearching(false);
+    setQueries('');
+  }
+
+  useEffect(() => {
+    (async () => {
+      if (searching) {
+        try {
+          response.current = await fetch(apiUrl, { signal: fetchController.signal });
+          const reader = response.current.body.getReader();
+          const textDecoder = new TextDecoder("utf-8");
+
+          while (true) {
+            const { value, done } = await reader.read();
+            if (done) break;
+            const parsedData = stringToJSON(textDecoder.decode(value));
+
+            parsedData.forEach((tweet) => {
+              console.log(tweet.text);
+              console.log(tweet.matches);
+              tweet.matches.forEach((word) => {
+                tweet.text =
+                  tweet.text.replaceAll(
+                    new RegExp(word, 'g'), `<mark style='background-color: #1DA1F2'>${word}</mark>`
+                  );
+              });
+              console.log(tweet.text);
+            });
+
+            setTweets(tweets => [ ...parsedData, ...tweets ]);
+          }
+        } catch(err) {
+          console.log(err);
+        }
+
+      }
+    })();
+  }, [apiUrl, searching, fetchController.signal]);
 
   return (
     <>
       <div className="bg-blue-400 h-screen block">
         <div className="h-44 w-full flex justify-center items-end">
-          <form onSubmit={handleSubmit}>
+          <form className="flex" onSubmit={(e) => startFilter(e)}>
             <input
               type="text"
               placeholder="Enter comma separated queries (Ex: query1, query2)"
@@ -78,9 +108,21 @@ export default function Home() {
             />
             <button
               type="submit"
-              className="bg-gray-300 w-28 h-12 rounded-lg ml-6 text-xl hover:bg-gray-200"
+              className="bg-gray-300 w-28 h-12 rounded-lg ml-4 text-xl hover:bg-gray-200 grid place-content-center"
             >
-              Search
+              {searching ?
+                <div
+                  style={{borderTopColor: 'transparent'}}
+                  className="w-6 h-6 border-4 border-black border-dashed rounded-full animate-spin">
+                </div> :
+               'Search'
+              }
+            </button>
+            <button
+              onClick={(e) => {stopFilter(e)}}
+              className="bg-red-500 w-28 h-12 rounded-lg ml-4 text-xl hover:bg-red-400 grid place-content-center"
+            >
+              Stop
             </button>
           </form>
         </div>
@@ -91,7 +133,9 @@ export default function Home() {
                  key={tweet.id}
                  className="h-44 w-card bg-white rounded-2xl m-auto px-4 my-4 grid place-items-center"
                 >
-                {tweet.text}
+                <span>
+                  {parse(tweet.text)}
+                </span>
               </div>
             );
           })}
