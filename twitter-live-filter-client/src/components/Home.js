@@ -2,7 +2,7 @@ import { React, useState, useEffect, useRef } from 'react';
 import parse from 'html-react-parser';
 
 export default function Home() {
-  const baseUrl = `http://${window.location.hostname}:3002/filter`;
+  const baseUrl = `${window.location.origin.slice(0, -5)}:3002/filter`;
   const [queries, setQueries] = useState('');
   const [apiUrl, setApiUrl] = useState('');
   const [tweets, setTweets] = useState([]);
@@ -73,15 +73,12 @@ export default function Home() {
             const parsedData = stringToJSON(textDecoder.decode(value));
 
             parsedData.forEach((tweet) => {
-              console.log(tweet.text);
-              console.log(tweet.matches);
               tweet.matches.forEach((word) => {
                 tweet.text =
                   tweet.text.replaceAll(
                     new RegExp(word, 'g'), `<mark style='background-color: #1DA1F2'>${word}</mark>`
                   );
               });
-              console.log(tweet.text);
             });
 
             setTweets(tweets => [ ...parsedData, ...tweets ]);

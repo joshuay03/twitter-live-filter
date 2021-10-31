@@ -6,7 +6,7 @@ const bucket = require('../util/aws');
 const analyzer = new natural.SentimentAnalyzer('English', natural.PorterStemmer, 'afinn');
 
 function createFilterStream(queries) {
-    return new Transform({        
+    return new Transform({
         transform(chunk, encoding, callback) {
             let filteredTweet = '';
             let match = false;
@@ -20,13 +20,14 @@ function createFilterStream(queries) {
                         tweet.data.matches = word;
 
                         const score = analyzer.getSentiment(tokenizedTweet);
-
                         tweet.data.sentimentScore = score;
 
-                        filteredTweet = JSON.stringify(tweet);
-
-                        bucket.uploadObject(word, filteredTweet)
+                        // Store in S3
+                        bucket
+                            .uploadObject(word, tweet)
                             .catch(err => console.log(err));
+
+                        filteredTweet = JSON.stringify(tweet);
 
                         match = true;
                         break;
@@ -34,11 +35,12 @@ function createFilterStream(queries) {
                 }
             } catch (err) {
                 // Various encoding/decoding issues with the tweets due to special characters.
-                // As such, we shoud keep the signal alive and do nothing.
+                // As such, we should keep the signal alive and do nothing.
             }
+
             return callback(null, match ? filteredTweet : undefined);
         },
     });
 }
 
-module.exports = createFilterStream; 
+module.exports = createFilterStream;
