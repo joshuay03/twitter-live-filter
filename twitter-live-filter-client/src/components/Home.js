@@ -94,7 +94,7 @@ export default function Home() {
 
       }
     })();
-  }, [apiUrl, searching, fetchController.signal]);
+  }, [apiUrl, searching, fetchController.signal, tweets]);
 
   return (
     <>
