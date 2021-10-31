@@ -31,7 +31,7 @@ router.get('/', (req, res, next) => {
     queries.forEach(v => {
         bucket.getObject(v)
             .then(result => {
-                res.write(result.Body);
+                res.write(result.Body.toString('utf-8'));
             }).catch(err => console.log(err));
     });
 

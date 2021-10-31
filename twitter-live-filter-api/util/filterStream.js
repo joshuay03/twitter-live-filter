@@ -17,17 +17,24 @@ function createFilterStream(queries) {
                 // Check if tweet text contains any of the queries
                 for (let word of tokenizedTweet) {
                     if (queries.indexOf(word) !== -1) {
-                        tweet.data.matches = word;
+                        if (tweet.data.matches) {
+                            if (!tweet.data.matches.includes(word)) {
+                                tweet.data.matches.push(word);
+                            }
+                        } else {
+                            tweet.data.matches = [word];
+                        }
 
                         const score = analyzer.getSentiment(tokenizedTweet);
                         tweet.data.sentimentScore = score;
 
+                        filteredTweet = JSON.stringify(tweet);
+
                         // Store in S3
                         bucket
-                            .uploadObject(word, tweet)
+                            .uploadObject(word, filteredTweet)
                             .catch(err => console.log(err));
 
-                        filteredTweet = JSON.stringify(tweet);
 
                         match = true;
                         break;
