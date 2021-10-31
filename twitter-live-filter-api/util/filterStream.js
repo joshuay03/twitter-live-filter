@@ -2,8 +2,13 @@ const natural = require('natural');
 const tokenizer = new natural.WordTokenizer();
 const { Transform } = require('stream');
 const bucket = require('../util/aws');
+const redis = require('redis');
 
 const analyzer = new natural.SentimentAnalyzer('English', natural.PorterStemmer, 'afinn');
+const redisClient = redis.createClient({
+    host: process.env.REDIS_CLUSTER_HOST,
+    port: process.env.REDIS_CLUSTER_PORT,
+  });
 
 function createFilterStream(queries) {
     return new Transform({
@@ -30,11 +35,37 @@ function createFilterStream(queries) {
 
                         filteredTweet = JSON.stringify(tweet);
 
-                        // Store in S3
-                        bucket
-                            .uploadObject(word, filteredTweet)
-                            .catch(err => console.log(err));
+                        // Check if results for this query exist in cache
+                        redisClient.get(word, (err, result) => {
+                            if (result) {
+                                // Update the result
+                                result = JSON.parse(result);
+                                result.tweets.push(tweet);
 
+                                redisClient.setex(word, 300, JSON.stringify(result));
+                            } else {
+                                // Create new entry
+                                redisClient.setex(word, 300, JSON.stringify({
+                                    tweets: [tweet],
+                                }));
+                            }
+                        })
+
+                        // Check if results for this query exist in S3
+                        bucket
+                            .getObject(word, (result) => {
+                                // Update the result
+                                result = JSON.parse(result.Body);
+                                result.tweets.push(tweet);
+                                bucket.uploadObject(word, JSON.stringify(result));
+                            })
+                            .catch((e) => {
+                                if (e.code === 'NoSuchKey') {
+                                    bucket.uploadObject(word, JSON.stringify({
+                                        tweets: [tweet],
+                                    }));
+                                }
+                            })
 
                         match = true;
                         break;

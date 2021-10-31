@@ -86,7 +86,7 @@ export default function Home() {
               }
             });
 
-              setTweets(tweets => [ ...filteredData, ...tweets ]);
+            setTweets(tweets => [ ...filteredData, ...tweets ]);
           }
         } catch(err) {
           console.log(err);

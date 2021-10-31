@@ -4,6 +4,7 @@ const needle = require('needle');
 const { pipeline, PassThrough } = require('stream');
 const { promisify } = require('util');
 const _pipeline = promisify(pipeline);
+const redis = require('redis');
 
 const createFilterStream = require('../util/filterStream');
 const twitterStream = needle.get(process.env.STREAM_API_URL);
@@ -12,6 +13,10 @@ twitterStream.on('err', (err) => {
     // should attempt reconnect
 });
 
+const redisClient = redis.createClient({
+  host: process.env.REDIS_CLUSTER_HOST,
+  port: process.env.REDIS_CLUSTER_PORT,
+});
 const bucket = require('../util/aws');
 
 /* GET Twitter stream filtered. */
@@ -27,12 +32,29 @@ router.get('/', (req, res, next) => {
         'Content-Type': 'text/plain; charset=utf-8',
     });
 
-    // Check for pre-existing data in S3 and write to response stream
+    // Check for pre-existing data in redis and S3 and write to response stream
     queries.forEach(v => {
-        bucket.getObject(v)
+      redisClient.get(v, (err, result) => {
+        if (result) {
+          resultJSON = JSON.parse(result);
+          resultJSON.tweets.forEach((tweet) => {
+            res.write(JSON.stringify(tweet));
+          })
+        } else {
+          bucket.getObject(v)
             .then(result => {
-                res.write(result.Body.toString('utf-8'));
-            }).catch(err => console.log(err));
+                resultJSON = JSON.parse(result.Body.toString('utf-8'));
+                resultJSON.tweets.forEach((tweet) => {
+                  res.write(JSON.stringify(tweet));
+                });
+            })
+            .catch((err) => {
+              if (err.code !== 'NoSuchKey') {
+                console.log(err)
+              }
+            });
+        }
+      })
     });
 
     const filterStream = createFilterStream(queries);
