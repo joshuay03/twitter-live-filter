@@ -71,17 +71,22 @@ export default function Home() {
             const { value, done } = await reader.read();
             if (done) break;
             const parsedData = stringToJSON(textDecoder.decode(value));
+            let filteredData = [];
 
             parsedData.forEach((tweet) => {
-              tweet.matches.forEach((word) => {
-                tweet.text =
-                  tweet.text.replaceAll(
-                    new RegExp(word, 'g'), `<mark style='background-color: #1DA1F2'>${word}</mark>`
-                  );
-              });
+              if (!(tweets.find(existingTweet => existingTweet.id === tweet.id))) {
+                tweet.matches.forEach((word) => {
+                  tweet.text =
+                    tweet.text.replaceAll(
+                      new RegExp(word, 'g'), `<mark style='background-color: #1DA1F2'>${word}</mark>`
+                    );
+                });
+
+                filteredData.push(tweet);
+              }
             });
 
-            setTweets(tweets => [ ...parsedData, ...tweets ]);
+              setTweets(tweets => [ ...filteredData, ...tweets ]);
           }
         } catch(err) {
           console.log(err);
