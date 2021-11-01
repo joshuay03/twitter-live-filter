@@ -31,44 +31,46 @@ function createFilterStream(queries) {
                         }
 
                         const score = analyzer.getSentiment(tokenizedTweet);
-                        tweet.data.sentimentScore = score;
 
-                        filteredTweet = JSON.stringify(tweet);
+                        if (score > 0.5) {
+                            tweet.data.sentimentScore = score;
 
-                        // Check if results for this query exist in cache
-                        redisClient.get(word, (err, result) => {
-                            if (result) {
-                                // Update the result
-                                result = JSON.parse(result);
-                                result.tweets.push(tweet);
+                            filteredTweet = JSON.stringify(tweet);
 
-                                redisClient.setex(word, 300, JSON.stringify(result));
-                            } else {
-                                // Create new entry
-                                redisClient.setex(word, 300, JSON.stringify({
-                                    tweets: [tweet],
-                                }));
-                            }
-                        })
+                            // Check if results for this query exist in cache
+                            redisClient.get(word, (err, result) => {
+                                if (result) {
+                                    // Update the result
+                                    result = JSON.parse(result);
+                                    result.tweets.push(tweet);
 
-                        // Check if results for this query exist in S3
-                        bucket
-                            .getObject(word, (result) => {
-                                // Update the result
-                                result = JSON.parse(result.Body);
-                                result.tweets.push(tweet);
-                                bucket.uploadObject(word, JSON.stringify(result));
-                            })
-                            .catch((e) => {
-                                if (e.code === 'NoSuchKey') {
-                                    bucket.uploadObject(word, JSON.stringify({
+                                    redisClient.setex(word, 300, JSON.stringify(result));
+                                } else {
+                                    // Create new entry
+                                    redisClient.setex(word, 300, JSON.stringify({
                                         tweets: [tweet],
                                     }));
                                 }
                             })
 
-                        match = true;
-                        break;
+                            // Check if results for this query exist in S3
+                            bucket
+                                .getObject(word, (result) => {
+                                    // Update the result
+                                    result = JSON.parse(result.Body);
+                                    result.tweets.push(tweet);
+                                    bucket.uploadObject(word, JSON.stringify(result));
+                                })
+                                .catch((e) => {
+                                    if (e.code === 'NoSuchKey') {
+                                        bucket.uploadObject(word, JSON.stringify({
+                                            tweets: [tweet],
+                                        }));
+                                    }
+                                })
+
+                            match = true;
+                        }
                     }
                 }
             } catch (err) {
